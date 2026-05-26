@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Check-in — Leti</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --border: #e4e6ec;
+    --text: #1a1b2e;
+    --text-muted: #6b7280;
+    --accent: #6366f1;
+    --accent-light: #eef0ff;
+    --green: #10b981;
+    --green-light: #d1fae5;
+    --yellow: #d97706;
+    --yellow-light: #fef3c7;
+    --red: #ef4444;
+    --red-light: #fee2e2;
+    --blue: #3b82f6;
+    --blue-light: #dbeafe;
+    --purple: #8b5cf6;
+    --purple-light: #ede9fe;
+    --radius: 12px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ─────────────────────────────── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  }
+
+  .header-left { display: flex; align-items: center; gap: 16px; }
+
+  .logo {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    letter-spacing: -0.3px;
+  }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .week-nav button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 15px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+  .week-nav button:hover { background: var(--surface); color: var(--text); }
+
+  .week-label {
+    font-weight: 600;
+    font-size: 13px;
+    min-width: 148px;
+    text-align: center;
+    padding: 0 6px;
+  }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  .today-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .today-btn:hover { background: var(--bg); color: var(--text); }
+
+  .btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #4f46e5; }
+
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+
+  /* ── Sync status ────────────────────────── */
+  .sync-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .refresh-btn:hover { background: var(--bg); color: var(--text); }
+  .refresh-btn.spinning .refresh-icon { animation: spin 0.8s linear infinite; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Loading overlay ────────────────────── */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    transition: opacity 0.3s;
+  }
+  .loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .loading-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* ── Setup banner ───────────────────────── */
+  .setup-banner {
+    background: var(--yellow-light);
+    border: 1px solid #fde68a;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 18px;
+    grid-column: 1 / -1;
+  }
+  .setup-banner h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--yellow);
+  }
+  .setup-banner ol {
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .setup-banner code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+
+  /* ── Layout ──────────────────────────────── */
+  .main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  /* ── Cards ───────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-full { grid-column: 1 / -1; }
+
+  .card-header {
+    padding: 15px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .card-title {
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .card-subtitle {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+
+  .card-body { padding: 16px 20px; flex: 1; }
+
+  .btn-add {
+    padding: 5px 12px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .btn-add:hover { background: var(--accent); color: white; }
+
+  /* ── Empty states ────────────────────────── */
+  .empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+    padding: 10px 0;
+    text-align: center;
+  }
+
+  /* ── KR Progress ─────────────────────────── */
+  .kr-item {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .kr-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .kr-item:first-child { padding-top: 0; }
+
+  .kr-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .kr-name { font-weight: 500; flex: 1; line-height: 1.4; }
+
+  .kr-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .kr-pct {
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 36px;
+    text-align: right;
+  }
+
+  .row-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .kr-item:hover .row-actions,
+  .list-item:hover .row-actions,
+  .task-item:hover .row-actions { opacity: 1; }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 3px 5px;
+    border-radius: 5px;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .icon-btn:hover { background: var(--bg); color: var(--red); }
+  .icon-btn.edit:hover { color: var(--blue); }
+
+  .progress-bar {
+    height: 7px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 7px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.35s ease;
+  }
+
+  .kr-slider {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  .kr-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .kr-meta-item { font-style: italic; }
+
+  /* ── List items (wins, blockers) ─────────── */
+  .list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .list-item:last-child { border-bottom: none; }
+  .list-item:first-child { padding-top: 0; }
+
+  .list-dot { flex-shrink: 0; margin-top: 2px; }
+  .list-text { flex: 1; line-height: 1.5; }
+
+  /* ── Badges ──────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .badge-high { background: var(--red-light); color: var(--red); }
+  .badge-med  { background: var(--yellow-light); color: var(--yellow); }
+  .badge-low  { background: var(--blue-light); color: var(--blue); }
+
+  .badge-p1      { background: var(--red-light); color: var(--red); }
+  .badge-p2      { background: var(--yellow-light); color: var(--yellow); }
+  .badge-p3      { background: var(--blue-light); color: var(--blue); }
+  .badge-someday { background: #f3f4f6; color: var(--text-muted); }
+
+  /* ── Task items ──────────────────────────── */
+  .task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-item:first-child { padding-top: 0; }
+
+  .task-checkbox {
+    width: 17px;
+    height: 17px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    font-size: 10px;
+    color: transparent;
+  }
+  .task-checkbox:hover { border-color: var(--green); }
+  .task-checkbox.checked {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+
+  .task-text { flex: 1; line-height: 1.5; }
+  .task-text.done { text-decoration: line-through; color: var(--text-muted); }
+
+  /* ── Add row ─────────────────────────────── */
+  .add-row {
+    display: flex;
+    gap: 7px;
+    margin-top: 14px;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .add-input {
+    flex: 1;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border 0.15s, background 0.15s;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .add-input:focus { border-color: var(--accent); background: white; }
+
+  .add-select {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    background: var(--bg);
+    cursor: pointer;
+    color: var(--text);
+  }
+  .add-select:focus { border-color: var(--accent); }
+
+  /* ── Triage grid ─────────────────────────── */
+  .triage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
+
+  .triage-card {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 12px 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .triage-card:hover { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+
+  .triage-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .triage-name { font-weight: 500; flex: 1; line-height: 1.4; }
+
+  .triage-card-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .triage-card:hover .triage-card-actions { opacity: 1; }
+
+  .triage-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .triage-note { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+  .btn-promote {
+    background: var(--green-light);
+    color: var(--green);
+    border: none;
+    border-radius: 5px;
+    padding: 3px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn-promote:hover { background: var(--green); color: white; }
+
+  /* ── Add triage row ──────────────────────── */
+  .add-triage-row {
+    display: flex;
+    gap: 7px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    align-items: center;
+  }
+
+  /* ── Modal ───────────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.28);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+  }
+
+  .modal {
+    background: white;
+    border-radius: 14px;
+    padding: 26px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.16);
+  }
+
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+
+  .form-group { margin-bottom: 14px; }
+
+  .form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border 0.15s;
+    color: var(--text);
+  }
+  .form-control:focus { border-color: var(--accent); }
+  textarea.form-control { resize: vertical; min-height: 74px; }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  /* ── Summary ─────────────────────────────── */
+  .summary-pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 12.5px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    max-height: 380px;
+    overflow-y: auto;
+    font-family: 'Menlo', 'Courier New', monospace;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  /* ── Responsive ──────────────────────────── */
+  @media (max-width: 680px) {
+    .main { grid-template-columns: 1fr; padding: 16px; }
+    .card-full { grid-column: 1; }
+    .header { padding: 12px 16px; }
+    .week-label { min-width: 120px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Loading overlay ───────────────────────────────────────── -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading check-in data...</div>
+</div>
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">📋 Leti Check-in</div>
+    <div class="week-nav">
+      <button onclick="changeWeek(-1)" title="Previous week">‹</button>
+      <div class="week-label" id="weekLabel"></div>
+      <button onclick="changeWeek(1)" title="Next week">›</button>
+    </div>
+    <button class="today-btn" onclick="goToToday()">Today</button>
+  </div>
+  <div class="header-actions">
+    <div class="sync-indicator" id="sync-indicator">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-text">Loading...</span>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" onclick="refreshData()" title="Pull latest data">
+      <span class="refresh-icon" style="display:inline-block">↻</span> Refresh
+    </button>
+    <button class="btn btn-secondary" onclick="showSummary()">📤 Copy Summary</button>
+  </div>
+</div>
+
+<!-- ── Main grid ───────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Setup banner (shown only when not configured) -->
+  <div class="setup-banner" id="setup-banner" style="display:none">
+    <h3>⚠️ Google Sheets backend not configured</h3>
+    <ol>
+      <li>Create a new Google Sheet</li>
+      <li>Go to <strong>Extensions &gt; Apps Script</strong></li>
+      <li>Paste the contents of <code>Code.gs</code> (provided with this file)</li>
+      <li>Click <strong>Deploy &gt; New Deployment</strong> &rarr; Type: <em>Web app</em>, Execute as: <em>Me</em>, Who has access: <em>Anyone</em></li>
+      <li>Copy the Web App URL and paste it into the <code>SCRIPT_URL</code> variable in this HTML file</li>
+      <li>Refresh this page</li>
+    </ol>
+  </div>
+
+  <!-- KR Progress -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="card-icon" style="background:var(--purple-light)">🎯</div>
+        KR Progress
+      </div>
+      <button class="btn-add" onclick="openModal('kr')">+ Add KR</button>
+    </div>
+    <div class="card-body" id="kr-list"></div>
+  </div>
+
+  <!-- Last Week's Wins -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="card-icon" style="background:var(--green-light)">🏆</div>
+        Last Week's Wins
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="wins-list"></div>
+      <div class="add-row">
+        <input class="add-input" id="wins-input" placeholder="Add a win..." onkeydown="if(event.key==='Enter')addWin()">
+        <button class="btn-add" onclick="addWin()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current Blockers -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="card-icon" style="background:var(--red-light)">🚧</div>
+        Current Blockers
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="blockers-list"></div>
+      <div class="add-row">
+        <input class="add-input" id="blockers-input" placeholder="Add a blocker..." onkeydown="if(event.key==='Enter')addBlocker()">
+        <select class="add-select" id="blockers-severity">
+          <option value="high">🔴 High</option>
+          <option value="med" selected>🟡 Med</option>
+          <option value="low">🔵 Low</option>
+        </select>
+        <button class="btn-add" onclick="addBlocker()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- This Week's Focus -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="card-icon" style="background:var(--accent-light)">⚡</div>
+        This Week's Focus
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="focus-list"></div>
+      <div class="add-row">
+        <input class="add-input" id="focus-input" placeholder="Add a task..." onkeydown="if(event.key==='Enter')addFocus()">
+        <button class="btn-add" onclick="addFocus()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Triage -->
+  <div class="card card-full">
+    <div class="card-header">
+      <div class="card-title">
+        <div class="card-icon" style="background:var(--yellow-light)">📥</div>
+        Task Triage
+        <span class="card-subtitle">Dump it here. Sort it later. Hit "→ This Week" to promote.</span>
+      </div>
+      <button class="btn-add" onclick="openModal('triage')">+ Add Task</button>
+    </div>
+    <div class="card-body">
+      <div id="triage-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Modal ───────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIGURATION — Paste your Apps Script Web App URL below
+// ═══════════════════════════════════════════════════════════
+
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1DeSvSBFHNikZKrrL22qdRwSWLzWrG189xbLPY6CfwlwyoUuDVOGwAC0IIOxuQcXDYA/exec';
+
+// ═══════════════════════════════════════════════════════════
+//  STORAGE LAYER — Google Sheets via Apps Script
+// ═══════════════════════════════════════════════════════════
+
+let _cache = {};       // In-memory cache of all data
+let _loaded = false;   // Whether initial load is complete
+const _isConfigured = SCRIPT_URL !== 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
+// ── Sync reads (from cache) ──────────────────────────────
+
+function weekLoad(key) {
+  const k = `leti_w_${currentWeekKey}_${key}`;
+  if (_cache[k] === undefined) return null;
+  try { return JSON.parse(_cache[k]); } catch { return null; }
+}
+
+function weekSave(key, val) {
+  const k = `leti_w_${currentWeekKey}_${key}`;
+  const v = JSON.stringify(val);
+  _cache[k] = v;
+  persistToSheet(k, v);
+}
+
+function gLoad(key) {
+  const k = `leti_g_${key}`;
+  if (_cache[k] === undefined) return null;
+  try { return JSON.parse(_cache[k]); } catch { return null; }
+}
+
+function gSave(key, val) {
+  const k = `leti_g_${key}`;
+  const v = JSON.stringify(val);
+  _cache[k] = v;
+  persistToSheet(k, v);
+}
+
+// ── Async write to Google Sheet ──────────────────────────
+
+let _writeQueue = Promise.resolve();
+
+function persistToSheet(key, value) {
+  if (!_isConfigured) return;
+  updateSyncStatus('syncing');
+
+  // Queue writes so they don't overlap
+  _writeQueue = _writeQueue
+    .then(() => fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ key, value }),
+      redirect: 'follow',
+    }))
+    .then(resp => {
+      if (resp.ok || resp.type === 'opaque') updateSyncStatus('synced');
+      else updateSyncStatus('error');
+    })
+    .catch(() => updateSyncStatus('error'));
+}
+
+// ── Load all data from Google Sheet ──────────────────────
+
+async function loadFromSheet() {
+  if (!_isConfigured) {
+    document.getElementById('setup-banner').style.display = 'block';
+    document.getElementById('loading-overlay').classList.add('hidden');
+    updateSyncStatus('offline');
+    renderAll();
+    return;
+  }
+
+  updateSyncStatus('loading');
+  try {
+    const resp = await fetch(SCRIPT_URL + '?t=' + Date.now(), { redirect: 'follow' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    _cache = data;
+    _loaded = true;
+    updateSyncStatus('synced');
+  } catch (e) {
+    console.error('Failed to load from sheet:', e);
+    updateSyncStatus('error');
+  }
+
+  document.getElementById('loading-overlay').classList.add('hidden');
+  renderAll();
+}
+
+// ── Refresh (pull latest from other user) ────────────────
+
+async function refreshData() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  updateSyncStatus('loading');
+
+  try {
+    const resp = await fetch(SCRIPT_URL + '?t=' + Date.now(), { redirect: 'follow' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    _cache = data;
+    updateSyncStatus('synced');
+    renderAll();
+  } catch (e) {
+    console.error('Refresh failed:', e);
+    updateSyncStatus('error');
+  }
+
+  btn.classList.remove('spinning');
+}
+
+// ── Sync status UI ───────────────────────────────────────
+
+function updateSyncStatus(status) {
+  const dot  = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  if (!dot || !text) return;
+
+  const states = {
+    loading: { color: 'var(--yellow)', label: 'Loading...' },
+    syncing: { color: 'var(--blue)',   label: 'Syncing...' },
+    synced:  { color: 'var(--green)',  label: 'Synced' },
+    error:   { color: 'var(--red)',    label: 'Sync error' },
+    offline: { color: 'var(--text-muted)', label: 'Local only' },
+  };
+
+  const s = states[status] || states.synced;
+  dot.style.background = s.color;
+  text.textContent = s.label;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WEEK NAVIGATION
+// ═══════════════════════════════════════════════════════════
+
+let currentWeekKey = getWeekKey(new Date());
+
+function getWeekKey(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function getWeekLabel(key) {
+  const start = new Date(key + 'T12:00:00');
+  const end   = new Date(key + 'T12:00:00');
+  end.setDate(end.getDate() + 6);
+  const o = { month: 'short', day: 'numeric' };
+  return `${start.toLocaleDateString('en-US', o)} – ${end.toLocaleDateString('en-US', o)}`;
+}
+
+function changeWeek(delta) {
+  const d = new Date(currentWeekKey + 'T12:00:00');
+  d.setDate(d.getDate() + delta * 7);
+  currentWeekKey = getWeekKey(d);
+  document.getElementById('weekLabel').textContent = getWeekLabel(currentWeekKey);
+  renderAll();
+}
+
+function goToToday() {
+  currentWeekKey = getWeekKey(new Date());
+  document.getElementById('weekLabel').textContent = getWeekLabel(currentWeekKey);
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  KR PROGRESS
+// ═══════════════════════════════════════════════════════════
+
+function getKRs()        { return gLoad('krs') || []; }
+function saveKRs(v)      { gSave('krs', v); }
+function getKRProg()     { return weekLoad('krp') || {}; }
+function saveKRProg(v)   { weekSave('krp', v); }
+
+function renderKRs() {
+  const krs  = getKRs();
+  const prog = getKRProg();
+  const el   = document.getElementById('kr-list');
+
+  if (!krs.length) {
+    el.innerHTML = '<div class="empty">No KRs yet. Add your key results above.</div>';
+    return;
+  }
+
+  el.innerHTML = krs.map((kr, i) => {
+    const pct   = prog[i] !== undefined ? prog[i] : (kr.startPct || 0);
+    const note  = prog[`n${i}`] || '';
+    const color = pct >= 70 ? 'var(--green)' : pct >= 35 ? 'var(--yellow)' : 'var(--red)';
+    return `
+    <div class="kr-item">
+      <div class="kr-top">
+        <div class="kr-name">${esc(kr.name)}</div>
+        <div class="kr-right">
+          <div class="kr-pct" style="color:${color}">${pct}%</div>
+          <div class="row-actions">
+            <button class="icon-btn edit" onclick="openModal('kr-edit',${i})" title="Edit">✏️</button>
+            <button class="icon-btn" onclick="deleteKR(${i})" title="Delete">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <input type="range" class="kr-slider" min="0" max="100" value="${pct}"
+        oninput="updateKRProg(${i},this.value)">
+      <div class="kr-meta">
+        ${kr.target ? `<span class="kr-meta-item">🎯 ${esc(kr.target)}</span>` : ''}
+        ${note       ? `<span class="kr-meta-item">📝 ${esc(note)}</span>`       : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateKRProg(i, val) {
+  const p = getKRProg();
+  p[i] = +val;
+  saveKRProg(p);
+  const items = document.querySelectorAll('.kr-item');
+  const color = +val >= 70 ? 'var(--green)' : +val >= 35 ? 'var(--yellow)' : 'var(--red)';
+  if (items[i]) {
+    items[i].querySelector('.kr-pct').textContent = val + '%';
+    items[i].querySelector('.kr-pct').style.color = color;
+    items[i].querySelector('.progress-fill').style.width = val + '%';
+    items[i].querySelector('.progress-fill').style.background = color;
+  }
+}
+
+function deleteKR(i) {
+  if (!confirm('Remove this KR?')) return;
+  const krs = getKRs(); krs.splice(i, 1); saveKRs(krs); renderKRs();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WINS
+// ═══════════════════════════════════════════════════════════
+
+function getWins()       { return weekLoad('wins') || []; }
+function saveWins(v)     { weekSave('wins', v); }
+
+function addWin() {
+  const inp = document.getElementById('wins-input');
+  const t = inp.value.trim(); if (!t) return;
+  const w = getWins(); w.push(t); saveWins(w); inp.value = ''; renderWins();
+}
+
+function deleteWin(i) {
+  const w = getWins(); w.splice(i,1); saveWins(w); renderWins();
+}
+
+function renderWins() {
+  const w  = getWins();
+  const el = document.getElementById('wins-list');
+  if (!w.length) { el.innerHTML = '<div class="empty">Nothing yet — add what you nailed last week.</div>'; return; }
+  el.innerHTML = w.map((item, i) => `
+    <div class="list-item">
+      <span class="list-dot" style="color:var(--green)">✓</span>
+      <div class="list-text">${esc(item)}</div>
+      <div class="row-actions">
+        <button class="icon-btn" onclick="deleteWin(${i})" title="Remove">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BLOCKERS
+// ═══════════════════════════════════════════════════════════
+
+function getBlockers()   { return weekLoad('blk') || []; }
+function saveBlockers(v) { weekSave('blk', v); }
+
+function addBlocker() {
+  const inp = document.getElementById('blockers-input');
+  const t = inp.value.trim(); if (!t) return;
+  const sev = document.getElementById('blockers-severity').value;
+  const b = getBlockers(); b.push({ text: t, sev }); saveBlockers(b); inp.value = ''; renderBlockers();
+}
+
+function deleteBlocker(i) {
+  const b = getBlockers(); b.splice(i,1); saveBlockers(b); renderBlockers();
+}
+
+function renderBlockers() {
+  const b  = getBlockers();
+  const el = document.getElementById('blockers-list');
+  if (!b.length) { el.innerHTML = '<div class="empty">No blockers — clear skies ☀️</div>'; return; }
+  el.innerHTML = b.map((item, i) => `
+    <div class="list-item">
+      <span class="badge badge-${item.sev}">${item.sev.toUpperCase()}</span>
+      <div class="list-text">${esc(item.text)}</div>
+      <div class="row-actions">
+        <button class="icon-btn" onclick="deleteBlocker(${i})" title="Remove">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  THIS WEEK'S FOCUS
+// ═══════════════════════════════════════════════════════════
+
+function getFocus()      { return weekLoad('focus') || []; }
+function saveFocus(v)    { weekSave('focus', v); }
+
+function addFocus() {
+  const inp = document.getElementById('focus-input');
+  const t = inp.value.trim(); if (!t) return;
+  const f = getFocus(); f.push({ text: t, done: false }); saveFocus(f); inp.value = ''; renderFocus();
+}
+
+function toggleFocus(i) {
+  const f = getFocus(); f[i].done = !f[i].done; saveFocus(f); renderFocus();
+}
+
+function deleteFocus(i) {
+  const f = getFocus(); f.splice(i,1); saveFocus(f); renderFocus();
+}
+
+function renderFocus() {
+  const f  = getFocus();
+  const el = document.getElementById('focus-list');
+  if (!f.length) { el.innerHTML = '<div class="empty">No tasks yet — what\'s the plan this week?</div>'; return; }
+  el.innerHTML = f.map((t, i) => `
+    <div class="task-item">
+      <div class="task-checkbox ${t.done ? 'checked' : ''}" onclick="toggleFocus(${i})" title="Toggle done">
+        ${t.done ? '✓' : ''}
+      </div>
+      <div class="task-text ${t.done ? 'done' : ''}">${esc(t.text)}</div>
+      <div class="row-actions" style="opacity:1">
+        <button class="icon-btn" onclick="deleteFocus(${i})" title="Remove">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRIAGE BACKLOG
+// ═══════════════════════════════════════════════════════════
+
+const P_ORDER  = ['p1','p2','p3','someday'];
+const P_LABELS = { p1:'🔴 P1 — Now', p2:'🟡 P2 — Soon', p3:'🔵 P3 — Later', someday:'⚪ Someday' };
+
+function getTriage()     { return gLoad('triage') || []; }
+function saveTriage(v)   { gSave('triage', v); }
+
+function promoteToFocus(i) {
+  const triage = getTriage();
+  const task   = triage[i];
+  const focus  = getFocus();
+  const label  = task.name + (task.note ? ` — ${task.note}` : '');
+  focus.push({ text: label, done: false });
+  saveFocus(focus);
+  triage.splice(i, 1);
+  saveTriage(triage);
+  renderFocus();
+  renderTriage();
+}
+
+function deleteTriage(i) {
+  const t = getTriage(); t.splice(i,1); saveTriage(t); renderTriage();
+}
+
+function renderTriage() {
+  const triage = getTriage();
+  const el     = document.getElementById('triage-list');
+
+  if (!triage.length) {
+    el.innerHTML = '<div class="empty" style="padding:18px 0">Your backlog is clear. Use "+ Add Task" above to dump incoming work here, then triage it.</div>';
+    return;
+  }
+
+  const sorted = triage
+    .map((t, i) => ({ ...t, _i: i }))
+    .sort((a, b) => P_ORDER.indexOf(a.priority) - P_ORDER.indexOf(b.priority));
+
+  el.innerHTML = `<div class="triage-grid">
+    ${sorted.map(t => `
+      <div class="triage-card">
+        <div class="triage-card-top">
+          <div class="triage-name">${esc(t.name)}</div>
+          <div class="triage-card-actions">
+            <button class="icon-btn edit" onclick="openModal('triage-edit',${t._i})" title="Edit">✏️</button>
+            <button class="icon-btn" onclick="deleteTriage(${t._i})" title="Delete">✕</button>
+          </div>
+        </div>
+        <div class="triage-card-footer">
+          <span class="badge badge-${t.priority}">${P_LABELS[t.priority]}</span>
+          ${t.note ? `<span class="triage-note">${esc(t.note)}</span>` : ''}
+          <button class="btn-promote" onclick="promoteToFocus(${t._i})">→ This Week</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════════════════
+
+let _editCtx = null;
+
+function openModal(type, idx) {
+  _editCtx = { type, idx };
+  const body = document.getElementById('modal-body');
+
+  if (type === 'kr') {
+    body.innerHTML = `
+      <div class="modal-title">Add Key Result</div>
+      <div class="form-group">
+        <label class="form-label">Key Result</label>
+        <input class="form-control" id="m-name" placeholder="e.g. Grow webinar signups to 200/mo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target / Definition of Done</label>
+        <input class="form-control" id="m-target" placeholder="e.g. 200 signups by end of quarter">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Starting Progress (%)</label>
+        <input class="form-control" id="m-pct" type="number" min="0" max="100" value="0">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveKR()">Add KR</button>
+      </div>`;
+
+  } else if (type === 'kr-edit') {
+    const kr   = getKRs()[idx];
+    const prog = getKRProg();
+    body.innerHTML = `
+      <div class="modal-title">Edit Key Result</div>
+      <div class="form-group">
+        <label class="form-label">Key Result</label>
+        <input class="form-control" id="m-name" value="${escA(kr.name)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target / Definition of Done</label>
+        <input class="form-control" id="m-target" value="${escA(kr.target || '')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Progress Note (this week)</label>
+        <textarea class="form-control" id="m-note" placeholder="What moved the needle?">${esc(prog[`n${idx}`] || '')}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveKREdit()">Save</button>
+      </div>`;
+
+  } else if (type === 'triage') {
+    body.innerHTML = `
+      <div class="modal-title">Add Task to Triage</div>
+      <div class="form-group">
+        <label class="form-label">Task</label>
+        <input class="form-control" id="m-name" placeholder="What needs to get done?">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-control" id="m-prio">
+          <option value="p1">🔴 P1 — Now (urgent + important)</option>
+          <option value="p2" selected>🟡 P2 — Soon (important, not urgent)</option>
+          <option value="p3">🔵 P3 — Later (nice to have)</option>
+          <option value="someday">⚪ Someday (maybe/if-time)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes / Context</label>
+        <textarea class="form-control" id="m-note" placeholder="Any deadline, who asked, or why it matters?"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTriageNew()">Add Task</button>
+      </div>`;
+
+  } else if (type === 'triage-edit') {
+    const t = getTriage()[idx];
+    body.innerHTML = `
+      <div class="modal-title">Edit Task</div>
+      <div class="form-group">
+        <label class="form-label">Task</label>
+        <input class="form-control" id="m-name" value="${escA(t.name)}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <select class="form-control" id="m-prio">
+          <option value="p1" ${t.priority==='p1'?'selected':''}>🔴 P1 — Now</option>
+          <option value="p2" ${t.priority==='p2'?'selected':''}>🟡 P2 — Soon</option>
+          <option value="p3" ${t.priority==='p3'?'selected':''}>🔵 P3 — Later</option>
+          <option value="someday" ${t.priority==='someday'?'selected':''}>⚪ Someday</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes / Context</label>
+        <textarea class="form-control" id="m-note">${esc(t.note || '')}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTriageEdit()">Save</button>
+      </div>`;
+  }
+
+  document.getElementById('modal').style.display = 'flex';
+  setTimeout(() => { const f = body.querySelector('input,textarea'); if (f) f.focus(); }, 40);
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  _editCtx = null;
+}
+
+function saveKR() {
+  const name = document.getElementById('m-name').value.trim(); if (!name) return;
+  const target = document.getElementById('m-target').value.trim();
+  const pct    = +document.getElementById('m-pct').value || 0;
+  const krs    = getKRs();
+  const i      = krs.length;
+  krs.push({ name, target, startPct: pct }); saveKRs(krs);
+  const p = getKRProg(); p[i] = pct; saveKRProg(p);
+  closeModal(); renderKRs();
+}
+
+function saveKREdit() {
+  const i      = _editCtx.idx;
+  const krs    = getKRs();
+  krs[i].name   = document.getElementById('m-name').value.trim();
+  krs[i].target = document.getElementById('m-target').value.trim();
+  saveKRs(krs);
+  const p = getKRProg();
+  p[`n${i}`] = document.getElementById('m-note').value.trim();
+  saveKRProg(p);
+  closeModal(); renderKRs();
+}
+
+function saveTriageNew() {
+  const name = document.getElementById('m-name').value.trim(); if (!name) return;
+  const t = getTriage();
+  t.push({ name, priority: document.getElementById('m-prio').value, note: document.getElementById('m-note').value.trim() });
+  saveTriage(t); closeModal(); renderTriage();
+}
+
+function saveTriageEdit() {
+  const i = _editCtx.idx;
+  const t = getTriage();
+  t[i].name     = document.getElementById('m-name').value.trim();
+  t[i].priority = document.getElementById('m-prio').value;
+  t[i].note     = document.getElementById('m-note').value.trim();
+  saveTriage(t); closeModal(); renderTriage();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SUMMARY
+// ═══════════════════════════════════════════════════════════
+
+function showSummary() {
+  const krs      = getKRs();
+  const prog     = getKRProg();
+  const wins     = getWins();
+  const blockers = getBlockers();
+  const focus    = getFocus();
+  const triage   = getTriage();
+  const week     = getWeekLabel(currentWeekKey);
+
+  let txt = `WEEKLY CHECK-IN — ${week}\n${'─'.repeat(48)}\n\n`;
+
+  txt += `🎯  KR PROGRESS\n`;
+  if (krs.length) krs.forEach((kr, i) => {
+    const pct  = prog[i] !== undefined ? prog[i] : (kr.startPct || 0);
+    const note = prog[`n${i}`] ? ` — ${prog[`n${i}`]}` : '';
+    txt += `    • ${kr.name}: ${pct}%${note}\n`;
+  }); else txt += `    (none)\n`;
+
+  txt += `\n🏆  LAST WEEK'S WINS\n`;
+  if (wins.length) wins.forEach(w => txt += `    ✓ ${w}\n`);
+  else txt += `    (none)\n`;
+
+  txt += `\n🚧  CURRENT BLOCKERS\n`;
+  if (blockers.length) blockers.forEach(b => txt += `    [${b.sev.toUpperCase()}] ${b.text}\n`);
+  else txt += `    None — clear skies!\n`;
+
+  txt += `\n⚡  THIS WEEK'S FOCUS\n`;
+  if (focus.length) focus.forEach(t => txt += `    ${t.done ? '☑' : '☐'} ${t.text}\n`);
+  else txt += `    (none)\n`;
+
+  const p1 = triage.filter(t => t.priority === 'p1');
+  if (p1.length) {
+    txt += `\n🔴  UPCOMING P1 TASKS\n`;
+    p1.forEach(t => txt += `    • ${t.name}${t.note ? ` (${t.note})` : ''}\n`);
+  }
+
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `
+    <div class="modal-title">📤 Check-in Summary</div>
+    <div class="summary-pre" id="summary-pre">${esc(txt)}</div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" id="copy-btn" onclick="copySummary(${JSON.stringify(txt).replace(/</g,'\\u003c')})">Copy to Clipboard</button>
+    </div>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function copySummary(txt) {
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById('copy-btn');
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = 'Copy to Clipboard', 2200); }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS + INIT
+// ═══════════════════════════════════════════════════════════
+
+function esc(s)  { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escA(s) { return String(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function renderAll() {
+  renderKRs();
+  renderWins();
+  renderBlockers();
+  renderFocus();
+  renderTriage();
+}
+
+// Keyboard shortcut: Esc closes modal
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// Auto-refresh when tab becomes visible (pulls other user's changes)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && _isConfigured && _loaded) {
+    refreshData();
+  }
+});
+
+// ── Boot ─────────────────────────────────────────────────
+document.getElementById('weekLabel').textContent = getWeekLabel(currentWeekKey);
+loadFromSheet();
+</script>
+</body>
+</html>
